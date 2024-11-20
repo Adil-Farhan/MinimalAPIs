@@ -25,8 +25,9 @@ app.MapGet("/helloworld/{id:int}", (int id) =>
     return Results.Ok("HEllo" + id);
 });
 
-app.MapGet("/api/coupon", () =>
+app.MapGet("/api/coupon", (ILogger<Program> _logger) =>
 {
+    _logger.Log(LogLevel.Information, "Getting All Coupons");
     return Results.Ok(CouponStore.couponsList);
 }).WithName("GetCoupon").Produces<IEnumerable< Coupon>>(201);
 
@@ -37,9 +38,13 @@ app.MapGet("/api/coupon/{id:int}", (int id) =>
 }).WithName("GetCoupon").Produces<Coupon>(201);
 
 
-app.MapPost("/api/coupon/", ([FromBody] Coupon obj) =>
+
+
+
+app.MapPost("/api/coupon/", (ILogger<Program> _logger,  [FromBody] Coupon obj) =>
 {
-    if(obj.Id != 0 || string.IsNullOrEmpty(obj.Name))
+    _logger.Log(LogLevel.Information, "Creating a Coupon: " +obj.Name);
+    if (obj.Id != 0 || string.IsNullOrEmpty(obj.Name))
     {
         return Results.BadRequest("Invalid Id or Coupon Name");
     }
@@ -56,6 +61,9 @@ app.MapPost("/api/coupon/", ([FromBody] Coupon obj) =>
 }).WithName("CreateCoupon")
 .Accepts<Coupon>("application/json")
 .Produces<Coupon>(201).Produces(400);
+
+
+
 
 
 app.MapPut("/api/coupon/{id:int}", (int id) =>
