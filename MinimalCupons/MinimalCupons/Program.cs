@@ -1,5 +1,8 @@
+using AutoMapper;
 using Microsoft.AspNetCore.Mvc;
+using MinimalCupons;
 using MinimalCupons.Data;
+using MinimalCupons.DTO;
 using MinimalCupons.Models;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -8,7 +11,7 @@ var builder = WebApplication.CreateBuilder(args);
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
-
+builder.Services.AddAutoMapper(typeof(MappingConfig));
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -25,11 +28,13 @@ app.MapGet("/helloworld/{id:int}", (int id) =>
     return Results.Ok("HEllo" + id);
 });
 
-app.MapGet("/api/coupon", (ILogger<Program> _logger) =>
+app.MapGet("/api/coupon", (ILogger <Program> _logger) =>
 {
     _logger.Log(LogLevel.Information, "Getting All Coupons");
+    //var result = _mapper.Map<List<CouponCreateDTO>>(CouponStore.couponsList);
     return Results.Ok(CouponStore.couponsList);
-}).WithName("GetCoupon").Produces<IEnumerable< Coupon>>(201);
+
+}).WithName("GetAllCoupon").Produces<IEnumerable<CouponCreateDTO>>(201);
 
 
 app.MapGet("/api/coupon/{id:int}", (int id) =>
@@ -41,10 +46,10 @@ app.MapGet("/api/coupon/{id:int}", (int id) =>
 
 
 
-app.MapPost("/api/coupon/", (ILogger<Program> _logger,  [FromBody] Coupon obj) =>
+app.MapPost("/api/coupon/", (IMapper _mapper, ILogger<Program> _logger, [FromBody] CouponCreateDTO obj) =>
 {
-    _logger.Log(LogLevel.Information, "Creating a Coupon: " +obj.Name);
-    if (obj.Id != 0 || string.IsNullOrEmpty(obj.Name))
+    _logger.Log(LogLevel.Information, "Creating a Coupon: " + obj.Name);
+    if (string.IsNullOrEmpty(obj.Name))
     {
         return Results.BadRequest("Invalid Id or Coupon Name");
     }
@@ -54,12 +59,14 @@ app.MapPost("/api/coupon/", (ILogger<Program> _logger,  [FromBody] Coupon obj) =
         return Results.BadRequest("Coupon Name already Exists");
     }
 
-    obj.Id = CouponStore.couponsList.OrderByDescending(x => x.Id).FirstOrDefault().Id + 1;
-    CouponStore.couponsList.Add(obj);
+    Coupon coupon = _mapper.Map<Coupon>(obj);
+    coupon.Id = CouponStore.couponsList.OrderByDescending(x => x.Id).FirstOrDefault().Id + 1;
+    CouponStore.couponsList.Add(coupon);
 
-    return Results.CreatedAtRoute("GetCoupon", new { id = obj.Id}, obj);
+
+    return Results.CreatedAtRoute("GetCoupon", new { id = coupon.Id }, obj);
 }).WithName("CreateCoupon")
-.Accepts<Coupon>("application/json")
+.Accepts<CouponCreateDTO>("application/json")
 .Produces<Coupon>(201).Produces(400);
 
 
