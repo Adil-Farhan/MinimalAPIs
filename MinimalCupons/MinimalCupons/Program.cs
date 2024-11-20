@@ -1,3 +1,7 @@
+using Microsoft.AspNetCore.Mvc;
+using MinimalCupons.Data;
+using MinimalCupons.Models;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
@@ -20,6 +24,49 @@ app.MapGet("/helloworld/{id:int}", (int id) =>
     //return Results.BadRequest("HEllo");
     return Results.Ok("HEllo" + id);
 });
+
+app.MapGet("/api/coupon", () =>
+{
+    return Results.Ok(CouponStore.couponsList);
+}).WithName("GetCoupon").Produces<IEnumerable< Coupon>>(201);
+
+
+app.MapGet("/api/coupon/{id:int}", (int id) =>
+{
+    return Results.Ok(CouponStore.couponsList.FirstOrDefault(u => u.Id == id));
+}).WithName("GetCoupon").Produces<Coupon>(201);
+
+
+app.MapPost("/api/coupon/", ([FromBody] Coupon obj) =>
+{
+    if(obj.Id != 0 || string.IsNullOrEmpty(obj.Name))
+    {
+        return Results.BadRequest("Invalid Id or Coupon Name");
+    }
+
+    if (CouponStore.couponsList.FirstOrDefault(x => x.Name.ToLower().Equals(obj.Name.ToLower())) != null)
+    {
+        return Results.BadRequest("Coupon Name already Exists");
+    }
+
+    obj.Id = CouponStore.couponsList.OrderByDescending(x => x.Id).FirstOrDefault().Id + 1;
+    CouponStore.couponsList.Add(obj);
+
+    return Results.CreatedAtRoute("GetCoupon", new { id = obj.Id}, obj);
+}).WithName("CreateCoupon")
+.Accepts<Coupon>("application/json")
+.Produces<Coupon>(201).Produces(400);
+
+
+app.MapPut("/api/coupon/{id:int}", (int id) =>
+{
+    return Results.Ok(CouponStore.couponsList.FirstOrDefault(u => u.Id == id));
+}).WithName("UpdateCoupon"); ;
+
+app.MapDelete("/api/coupon/{id:int}", (int id) =>
+{
+    return Results.Ok(CouponStore.couponsList.FirstOrDefault(u => u.Id == id));
+}).WithName("DeleteCoupon"); ;
 
 
 app.UseHttpsRedirection();
