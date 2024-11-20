@@ -1,4 +1,5 @@
 using AutoMapper;
+using FluentValidation;
 using Microsoft.AspNetCore.Mvc;
 using MinimalCupons;
 using MinimalCupons.Data;
@@ -12,6 +13,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddAutoMapper(typeof(MappingConfig));
+builder.Services.AddValidatorsFromAssemblyContaining<Program>();
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -46,12 +48,16 @@ app.MapGet("/api/coupon/{id:int}", (int id) =>
 
 
 
-app.MapPost("/api/coupon/", (IMapper _mapper, ILogger<Program> _logger, [FromBody] CouponCreateDTO obj) =>
+app.MapPost("/api/coupon/", async (IValidator<CouponCreateDTO> _validator, IMapper _mapper, ILogger<Program> _logger, [FromBody] CouponCreateDTO obj) =>
 {
+    var validationResult = await _validator.ValidateAsync(obj);
+    
+
     _logger.Log(LogLevel.Information, "Creating a Coupon: " + obj.Name);
-    if (string.IsNullOrEmpty(obj.Name))
+
+    if(!validationResult.IsValid)
     {
-        return Results.BadRequest("Invalid Id or Coupon Name");
+        return Results.BadRequest(validationResult.Errors.FirstOrDefault().ToString());
     }
 
     if (CouponStore.couponsList.FirstOrDefault(x => x.Name.ToLower().Equals(obj.Name.ToLower())) != null)
